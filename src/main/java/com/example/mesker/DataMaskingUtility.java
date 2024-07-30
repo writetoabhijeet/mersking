@@ -32,4 +32,3 @@ public class DataMaskingUtility {
         System.out.println(maskedXml);
     }
 }
-
