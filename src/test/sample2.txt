@@ -1,0 +1,8 @@
+String xmlString = "<firstName>John</firstName>\n" +
+    "<lastName>Doe</lastName>\n" +
+    "<ssn>123-45-6789</ssn>\n" +
+    "<creditCardNumber>4111111111111111</creditCardNumber>\n" +
+    "<pan>ABCDE1234F</pan>\n" +
+    "<ban>123456789123456789</ban>\n" +
+    "<tel>+1-800-555-1234</tel>\n" +
+    "<email>EXAMPLE@EMAIL.COM</email>";
