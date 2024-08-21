@@ -1,29 +1,3 @@
-package com.example.mesker;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-
-import java.util.Map;
-import java.util.regex.Pattern;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import java.util.Iterator;
-import java.util.Map;
-import java.util.regex.Matcher;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import java.util.Iterator;
-import java.util.Map;
-import java.util.regex.Matcher;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -73,7 +47,7 @@ public class XmlProcessor implements DataProcessor {
             if (fieldName.contains(entry.getKey())) {
                 Matcher matcher = entry.getValue().getPattern().matcher(fieldValue);
                 if (matcher.matches()) {
-                    MaskingStrategy strategy = MaskingStrategyFactory.getStrategy(entry.getValue().getStrategy(), entry.getValue().getParams());
+                    MaskingStrategy strategy = MaskingStrategyFactory.getStrategy(entry.getValue().getStrategy(), entry.getValue().getParams(), entry.getValue().getMaskChar());
                     return strategy.mask(fieldValue);
                 }
             }
