@@ -1,0 +1,50 @@
+# Step 1: Use a base image that has OpenJDK 11 and Maven installed
+FROM maven:3.8.6-openjdk-11-slim as builder
+
+# Step 2: Install CA certificates and ca-certificates-java (creates the cacerts file)
+RUN apt-get update && apt-get install -y ca-certificates ca-certificates-java openssl && rm -rf /var/lib/apt/lists/*
+
+# Step 3: Set environment variables for Git credentials and repo details
+ARG GIT_USERNAME
+ARG GIT_PASSWORD
+ARG GIT_REPO_URL
+ARG GIT_BRANCH=main
+
+# Step 4: Install Git
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+# Step 5: Set the working directory in the container
+WORKDIR /app
+
+# Step 6: Copy your settings.xml file to the container
+COPY settings.xml /root/.m2/settings.xml
+
+# Step 7: Copy your custom certificate (replace with actual path to your certificate)
+COPY your_certificate.crt /usr/local/share/ca-certificates/your_certificate.crt
+
+# Step 8: Update CA certificates to include the custom certificate
+RUN update-ca-certificates
+
+# Step 9: Import the certificate into the Java truststore
+RUN keytool -importcert -noprompt -trustcacerts -alias custom_cert \
+  -file /usr/local/share/ca-certificates/your_certificate.crt \
+  -keystore /etc/ssl/certs/java/cacerts \
+  -storepass changeit
+
+# Step 10: Clone the repository using Git credentials
+RUN git clone --branch $GIT_BRANCH https://$GIT_USERNAME:$GIT_PASSWORD@$GIT_REPO_URL .
+
+# Step 11: Build the project with Maven, referring to the copied settings.xml
+RUN mvn --settings /root/.m2/settings.xml clean install
+
+# Step 12: Create a new minimal image with just JRE and your application
+FROM openjdk:11-jre-slim
+
+# Step 13: Copy the built artifacts from the Maven image
+COPY --from=builder /app /app
+
+# Step 14: Set the working directory in the container for runtime
+WORKDIR /app
+
+# Step 15: Define the command to run Karate tests
+CMD ["mvn", "test", "-Dtest=KarateRunnerClass"]
