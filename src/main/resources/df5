@@ -1,0 +1,32 @@
+# Use a full Maven image (non-slim version)
+FROM maven:3.8.6-openjdk-11 as builder
+
+# Set environment variables for Git credentials and repo details
+ARG GIT_USERNAME
+ARG GIT_PASSWORD
+ARG GIT_REPO_URL
+ARG GIT_BRANCH=main
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy your settings.xml file to the container
+COPY settings.xml /root/.m2/settings.xml
+
+# Clone the repository using Git credentials
+RUN git clone --branch $GIT_BRANCH https://$GIT_USERNAME:$GIT_PASSWORD@$GIT_REPO_URL .
+
+# Build the project with Maven
+RUN mvn --settings /root/.m2/settings.xml clean install
+
+# Create a new minimal image with just JRE and your application
+FROM openjdk:11-jre
+
+# Copy the built artifacts from the Maven image
+COPY --from=builder /app /app
+
+# Set the working directory in the container for runtime
+WORKDIR /app
+
+# Define the command to run Karate tests
+CMD ["mvn", "test", "-Dtest=KarateRunnerClass"]
