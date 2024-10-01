@@ -1,0 +1,5 @@
+docker build --build-arg GIT_USERNAME=<your-username> \
+             --build-arg GIT_PASSWORD=<your-password> \
+             --build-arg GIT_REPO_URL=<your-repo-url> \
+             --build-arg GIT_BRANCH=<your-branch> \
+             -t karate-regression-suite .
