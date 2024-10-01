@@ -1,0 +1,36 @@
+# Step 1: Use a base image that has OpenJDK 11 and Maven installed
+FROM maven:3.8.6-openjdk-11-slim as builder
+
+# Step 2: Set environment variables for Git credentials and repo details
+ARG GIT_USERNAME
+ARG GIT_PASSWORD
+ARG GIT_REPO_URL
+ARG GIT_BRANCH=main
+
+# Step 3: Install Git (if it's not included in the base image)
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+# Step 4: Set the working directory in the container
+WORKDIR /app
+
+# Step 5: Copy your settings.xml file to the container (assuming you have it locally)
+# Replace <local-path-to-settings.xml> with the actual path to your settings.xml on your host machine
+COPY <local-path-to-settings.xml> /root/.m2/settings.xml
+
+# Step 6: Clone the repository using Git credentials
+RUN git clone --branch $GIT_BRANCH https://$GIT_USERNAME:$GIT_PASSWORD@$GIT_REPO_URL .
+
+# Step 7: Build the project with Maven, referring to the copied settings.xml
+RUN mvn --settings /root/.m2/settings.xml clean install
+
+# Step 8: Create a new minimal image with just JRE and your application
+FROM openjdk:11-jre-slim
+
+# Step 9: Copy the built artifacts from the Maven image
+COPY --from=builder /app /app
+
+# Step 10: Set the working directory in the container for runtime
+WORKDIR /app
+
+# Step 11: Define the command to run Karate tests
+CMD ["mvn", "test", "-Dtest=KarateRunnerClass"]
