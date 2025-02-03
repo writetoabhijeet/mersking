@@ -1,0 +1,15 @@
+public class UnmaskLastNCharsStrategy implements MaskingStrategy {
+    private final int n;
+    private final char maskChar;
+
+    public UnmaskLastNCharsStrategy(int n, char maskChar) {
+        this.n = n;
+        this.maskChar = maskChar;
+    }
+
+    @Override
+    public String mask(String input) {
+        if (input.length() <= n) return input;
+        return String.valueOf(maskChar).repeat(input.length() - n) + input.substring(input.length() - n);
+    }
+}
