@@ -17,6 +17,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.yaml.snakeyaml.Yaml;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Pattern;
+
 public class ConfigLoader {
 
     private static final Map<String, SensitiveFieldConfig> sensitiveFieldConfigs = new HashMap<>();
@@ -38,7 +46,8 @@ public class ConfigLoader {
                 String regex = (String) fieldConfig.get("regex");
                 MaskingStrategyType strategy = MaskingStrategyType.valueOf(((String) fieldConfig.get("strategy")).toUpperCase());
                 Object params = fieldConfig.get("params");
-                sensitiveFieldConfigs.put(field.toLowerCase(), new SensitiveFieldConfig(Pattern.compile(regex, Pattern.CASE_INSENSITIVE), strategy, params));
+                char maskChar = fieldConfig.getOrDefault("maskChar", "*").toString().charAt(0);
+                sensitiveFieldConfigs.put(field.toLowerCase(), new SensitiveFieldConfig(Pattern.compile(regex, Pattern.CASE_INSENSITIVE), strategy, params, maskChar));
             }
         } catch (IOException ex) {
             throw new RuntimeException("Error loading configuration", ex);
