@@ -1,0 +1,34 @@
+public class SensitiveFieldConfig {
+
+    private MaskingStrategy maskingStrategy;
+    private int unmaskStart;
+    private int unmaskEnd;
+    private char maskChar;
+
+    public SensitiveFieldConfig(MaskingStrategy maskingStrategy, int unmaskStart, int unmaskEnd, char maskChar) {
+        this.maskingStrategy = maskingStrategy;
+        this.unmaskStart = unmaskStart;
+        this.unmaskEnd = unmaskEnd;
+        this.maskChar = maskChar;
+    }
+
+    // Overloaded constructor to handle NO_MASK
+    public SensitiveFieldConfig(MaskingStrategy maskingStrategy) {
+        this(maskingStrategy, 0, 0, '*');  // Default values are used
+    }
+
+    // In masking logic, skip masking if strategy is NO_MASK
+    public String applyMasking(String fieldValue) {
+        if (this.maskingStrategy == MaskingStrategy.NO_MASK) {
+            return fieldValue;  // No masking is applied
+        }
+
+        // Apply actual masking based on the strategy
+        return performMasking(fieldValue);
+    }
+
+    private String performMasking(String fieldValue) {
+        // Implement the masking logic here
+        return fieldValue;  // Placeholder
+    }
+}
