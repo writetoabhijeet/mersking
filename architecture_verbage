@@ -1,0 +1,74 @@
+The Architecture Diagram shows the high-level system structure, including External Client Systems, API Gateway, ComplianceValidatorService (with sub-components: API Controller, Interceptor Layer, Rule Processor, Drools Engine, Async Processor), MongoDB, Redis, Message Queue, and Monitoring System, with dependencies and data flows.
+
+performance.
+
+Interaction:
+Queried by ComplianceValidatorService for rules and configurations.
+
+Updated via rule management API.
+External Systems (Supporting Infrastructure)
+Description: Systems for caching, async processing, and monitoring.
+
+Representation: Separate boxes for:
+Redis: Caches rules, mappings, and error codes (TTL: 5 minutes).
+
+Message Queue: Kafka/RabbitMQ for async flow processing.
+
+Monitoring: Prometheus (metrics), ELK (logs).
+Technologies: Redis, Kafka/RabbitMQ, Prometheus, ELK.
+
+Interaction:
+Redis: Read/write by Caching Interceptor.
+
+Message Queue: Receives async tasks, stores results in MongoDB.
+
+Monitoring: Receives metrics and logs from interceptors.
+Interactions (Arrows)
+External Clients → API Gateway: HTTP POST /validate with clientId, flowType, requestData.
+
+API Gateway → ComplianceValidatorService: Forwards request after CORS/security checks.
+
+ComplianceValidatorService  MongoDB: Queries flow_rule_mappings, rules, client_rule_mappings, client_settings, rule_error_codes to fetch and filter rules.
+
+ComplianceValidatorService  Redis: Checks cache for rules/mappings; updates on rule changes.
+
+ComplianceValidatorService → Message Queue: Sends async validation tasks for non-critical flows.
+
+Message Queue → MongoDB: Stores async results.
+
+ComplianceValidatorService → Monitoring: Sends logs to ELK, metrics to Prometheus.
+
+ComplianceValidatorService → External Clients (via API Gateway): Returns validation response (e.g., errorCode: 4001).
+Annotations
+Performance: Label key paths with targets (e.g., "<500ms total latency", "<100ms cache hit").
+
+Scalability: Note autoscaling (e.g., "Kubernetes autoscaling" on ComplianceValidatorService).
+
+Dynamic Updates: Indicate rule updates via POST /rules/update to MongoDB.
+
+High Availability: Highlight circuit breakers for MongoDB/Drools failures.
+Technologies Summary
+Application: Spring Boot, Drools, Java.
+
+Database: MongoDB (indexed).
+
+Caching: Redis.
+
+Async: Kafka/RabbitMQ.
+
+Monitoring: Prometheus, ELK.
+
+Gateway: Spring Cloud Gateway/AWS API Gateway.
+Visual Layout
+Top: External Clients (boxes for systems/UI).
+
+Middle: API Gateway (single box).
+
+Center: ComplianceValidatorService (large box with sub-components: API, Interceptors, Business Logic, Async Processor).
+
+Bottom Left: MongoDB (box with collection sub-boxes).
+
+Bottom Right: External Systems (boxes for Redis, Message Queue, Monitoring).
+
+Arrows: Show request flow, data queries, cache access, async tasks, and monitoring.
+
