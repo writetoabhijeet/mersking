@@ -1,0 +1,30 @@
+@startuml Use Case Diagram
+
+actor "Client System" as Client
+actor "Compliance Admin" as Admin
+actor "Monitoring System" as Monitoring
+
+package "ComplianceValidatorService" {
+  [Validate Compliance]
+  [Manage Rules]
+  [Manage Client Configurations]
+  [Manage Flow Mappings]
+  [View Logs and Metrics]
+}
+
+Client --> [Validate Compliance]
+Admin --> [Manage Rules]
+Admin --> [Manage Client Configurations]
+Admin --> [Manage Flow Mappings]
+Monitoring --> [View Logs and Metrics]
+
+[Validate Compliance] .> [View Logs and Metrics] : <<include>>
+[Validate Compliance] .> [Manage Rules] : <<extend>>
+[Validate Compliance] .> [Manage Client Configurations] : <<extend>>
+
+note right of [Validate Compliance]
+  Scenario: Payment validation
+  Tech: Drools, MongoDB
+end note
+
+@enduml

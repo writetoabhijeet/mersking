@@ -1,0 +1,35 @@
+@startuml Flowchart
+
+start
+
+:Receive POST /validate Request;
+if (Valid clientId?) then (yes)
+  if (Valid flowType?) then (yes)
+    :Log Request Details;
+    if (allRulesEnabled?) then (yes)
+      :Query flow_rule_mappings;
+      :Filter rules by client_rule_mappings;
+      :Fetch rules from rules collection;
+      :Execute rules in Drools;
+      if (Any rules failed?) then (yes)
+        :Query rule_error_codes;
+        :Format error response;
+        :Record metrics;
+        :Return Error Response;
+      else (no)
+        :Record metrics;
+        :Return Success Response;
+      endif
+    else (no)
+      :Return Success Response;
+    endif
+  else (no)
+    :Return Error Response;
+  endif
+else (no)
+  :Return Error Response;
+endif
+
+stop
+
+@enduml

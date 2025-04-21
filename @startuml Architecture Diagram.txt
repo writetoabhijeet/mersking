@@ -1,0 +1,53 @@
+@startuml Architecture Diagram
+
+package "External Client Systems" {
+  [Client Systems]
+}
+
+package "API Gateway" {
+  [API Gateway]
+}
+
+package "ComplianceValidatorService" {
+  [API Controller]
+  [Interceptor Layer]
+  [Rule Processor]
+  [Drools Engine]
+  [Async Processor]
+  
+  [API Controller] --> [Interceptor Layer]
+  [Interceptor Layer] --> [Rule Processor]
+  [Rule Processor] --> [Drools Engine]
+  [Rule Processor] --> [Async Processor]
+}
+
+package "MongoDB" {
+  [MongoDB]
+}
+
+package "Redis" {
+  [Redis]
+}
+
+package "Message Queue" {
+  [Message Queue]
+}
+
+package "Monitoring System" {
+  [Monitoring System]
+}
+
+[Client Systems] --> [API Gateway] : HTTP
+[API Gateway] --> [API Controller] : HTTP
+[ComplianceValidatorService] --> [MongoDB] : Query
+[ComplianceValidatorService] --> [Redis] : Cache
+[ComplianceValidatorService] --> [Message Queue] : Publish
+[ComplianceValidatorService] --> [Monitoring System] : Logs/Metrics
+[Message Queue] --> [MongoDB] : Results
+
+note right of ComplianceValidatorService
+  Tech: Spring Boot, Drools
+  Performance: <500ms latency
+end note
+
+@enduml

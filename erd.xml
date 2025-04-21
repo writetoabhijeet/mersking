@@ -1,0 +1,43 @@
+<mxfile host="app.diagrams.net" modified="2025-04-21T12:00:00.000Z" agent="Draw.io" version="20.0.0" type="device">
+  <diagram id="erd" name="ERD">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <!-- rules -->
+        <mxCell id="2" value="rules&lt;br&gt;_id: ObjectId (PK)&lt;br&gt;ruleName: String&lt;br&gt;errorCodeId: ObjectId (FK)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="50" width="150" height="100" as="geometry"/>
+        </mxCell>
+        <!-- flow_rule_mappings -->
+        <mxCell id="3" value="flow_rule_mappings&lt;br&gt;_id: ObjectId (PK)&lt;br&gt;flowType: String&lt;br&gt;ruleIds: Array[ObjectId] (FK)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="50" width="150" height="100" as="geometry"/>
+        </mxCell>
+        <!-- client_rule_mappings -->
+        <mxCell id="4" value="client_rule_mappings&lt;br&gt;_id: ObjectId (PK)&lt;br&gt;clientId: String&lt;br&gt;ruleId: ObjectId (FK)" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="200" width="150" height="100" as="geometry"/>
+        </mxCell>
+        <!-- client_settings -->
+        <mxCell id="5" value="client_settings&lt;br&gt;_id: ObjectId (PK)&lt;br&gt;clientId: String" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="350" width="150" height="80" as="geometry"/>
+        </mxCell>
+        <!-- rule_error_codes -->
+        <mxCell id="6" value="rule_error_codes&lt;br&gt;_id: ObjectId (PK)&lt;br&gt;errorCode: Integer" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="450" y="50" width="150" height="100" as="geometry"/>
+        </mxCell>
+        <!-- Relationships -->
+        <mxCell id="7" edge="1" source="2" target="6" value="errorCodeId (1:1)">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="8" edge="1" source="3" target="2" value="ruleIds (1:N)">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="9" edge="1" source="4" target="2" value="ruleId (N:1)">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="10" edge="1" source="4" target="5" value="clientId (N:1)">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

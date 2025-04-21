@@ -1,0 +1,78 @@
+@startuml ERD
+
+entity "rules" {
+  * _id : ObjectId <<PK>>
+  --
+  ruleName : String
+  ruleContent : String
+  version : Integer
+  ruleGroup : String
+  errorCodeId : ObjectId <<FK>>
+  active : Boolean
+  createdAt : Date
+  updatedAt : Date
+}
+
+entity "rules_staging" {
+  * _id : ObjectId <<PK>>
+  --
+  ruleName : String
+  ruleContent : String
+  version : Integer
+  ruleGroup : String
+  errorCodeId : ObjectId <<FK>>
+  staged : Boolean
+  createdAt : Date
+  updatedAt : Date
+}
+
+entity "flow_rule_mappings" {
+  * _id : ObjectId <<PK>>
+  --
+  flowType : String
+  ruleIds : Array[ObjectId] <<FK>>
+  priority : Integer
+  active : Boolean
+  updatedAt : Date
+}
+
+entity "client_rule_mappings" {
+  * _id : ObjectId <<PK>>
+  --
+  clientId : String
+  ruleId : ObjectId <<FK>>
+  enabled : Boolean
+  priority : Integer
+  updatedAt : Date
+}
+
+entity "client_settings" {
+  * _id : ObjectId <<PK>>
+  --
+  clientId : String
+  allRulesEnabled : Boolean
+  updatedAt : Date
+}
+
+entity "rule_error_codes" {
+  * _id : ObjectId <<PK>>
+  --
+  errorCode : Integer
+  errorMessage : String
+  errorCategory : String
+  active : Boolean
+  createdAt : Date
+  updatedAt : Date
+}
+
+rules ||--o{ rule_error_codes : errorCodeId
+rules_staging ||--o{ rule_error_codes : errorCodeId
+flow_rule_mappings ||--o{ rules : ruleIds
+client_rule_mappings ||--o{ rules : ruleId
+client_rule_mappings ||--o{ client_settings : clientId
+
+note right of rules
+  Indexes: ruleName, errorCodeId
+end note
+
+@enduml
