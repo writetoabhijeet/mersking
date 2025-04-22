@@ -1,0 +1,31 @@
+@startuml
+
+package "ComplianceValidatorService" {
+  [API Controller] #--> [Interceptor Layer]
+  [Interceptor Layer] #--> [Rule Processor]
+  [Rule Processor] #--> [Drools Engine]
+  [Rule Processor] #--> [Async Processor]
+  
+  [API Controller] --> [:REST API]
+  [Interceptor Layer] --> [:Cache API]
+  [Rule Processor] --> [:MongoDB Query]
+  [Async Processor] --> [:Queue Publish]
+  [Interceptor Layer] --> [:Monitoring API]
+}
+
+[External Client Systems] --> [API Gateway]
+[API Gateway] --> [:REST API]
+
+[MongoDB] #--> [:MongoDB Query]
+[Redis] #--> [:Cache API]
+[Message Queue] #--> [:Queue Publish]
+[Monitoring System] #--> [:Monitoring API]
+
+[MongoDB] <<..>> [Message Queue]
+
+note right of [ComplianceValidatorService]
+  Tech: Spring Boot, Drools
+  Performance: <500ms latency
+end note
+
+@enduml
