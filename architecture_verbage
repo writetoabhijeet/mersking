@@ -1,12 +1,80 @@
 The Architecture Diagram shows the high-level system structure, including External Client Systems, API Gateway, ComplianceValidatorService (with sub-components: API Controller, Interceptor Layer, Rule Processor, Drools Engine, Async Processor), MongoDB, Redis, Message Queue, and Monitoring System, with dependencies and data flows.
+==========================================================================================
+External Clients (Top Tier)  
+Description: Systems or users accessing the service, such as transaction processing applications or compliance user interfaces.  
 
+API Gateway (Entry Point)  
+Description: Manages incoming requests, performs routing, and enforces fundamental security measures.
+
+ComplianceValidatorService (Core Application Layer)  
+Description: Java-based microservice responsible for rule validation processes
+API Layer: REST endpoints (POST /validate, POST /validate/async, POST /rules/update).
+
+Interceptors:
+- Authentication: Validates client credentials and tokens.
+- Request Validation: Ensures flowType and requestData are valid.
+- Logging: Asynchronous logging to ELK stack.
+- Metrics: Sends performance and usage metrics to Prometheus.
+- Error Handling: Maps errors to predefined rule_error_codes.
+- Caching: Retrieves data from Redis cache as needed.
+
+Business Logic:
+- Flow Handler: Maps flowType to corresponding rules via flow_rule_mappings.
+- Client Configuration: Filters applicable rules based on client_rule_mappings and client_settings.
+- Rules Engine: Executes precompiled rules using the Drools engine.
+- Asynchronous Processing: Manages non-critical flows through message queue integration.
+
+Interaction:
+Receives requests via API Gateway.
+
+Retrieves rules and mappings from MongoDB.
+
+Checks Redis cache for existing data.
+
+Enqueues asynchronous tasks to the message queue.
+
+Returns appropriate HTTP responses.
+
+Data Storage (Database Layer)  
+Description: Utilizes MongoDB to store rules, mappings, and error codes.  
+
+Representation: Diagram featuring a MongoDB instance with the following collections:  
+- rules: Contains rule content, version information, ruleGroup, and errorCodeId.  
+- flow_rule_mappings: Associates flowType with ruleIds, including priority data.  
+- client_rule_mappings: Links clientId to ruleIds, with enabled status and priority details.  
+- client_settings: Records configuration details such as whether allRulesEnabled is active for each client.  
+- rule_error_codes: Stores errorCode and corresponding errorMessage.  
+- rules_staging: Used for testing and validating new rules before deployment.  
+
+Technologies: MongoDB optimized with indexes to ensure high performance.  
+
+Interactions:  
+- Queried by the ComplianceValidatorService to retrieve rules and configurations.  
+- Updated through the rule management API as needed.
+
+External Systems (Supporting Infrastructure)  
+Description: Infrastructure components for caching, asynchronous processing, and system monitoring.
+
+Representation: Separate modules for:  
+- Redis: Responsible for caching rules, mappings, and error codes with a Time-to-Live (TTL) of 5 minutes.  
+- Message Queue: Kafka or RabbitMQ used for asynchronous message processing and flow management.  
+- Monitoring: Prometheus for metrics collection and ELK stack for log aggregation and analysis.
+
+Technologies: Redis, Kafka/RabbitMQ, Prometheus, ELK stack.
+
+Interactions:  
+- Redis: Accessed via caching interceptors for read/write operations.  
+- Message Queue: Handles asynchronous tasks and stores processing results in MongoDB.  
+- Monitoring: Collects metrics and logs from interceptors for system oversight.
+==========================================================================================
 performance.
 
 Interaction:
 Queried by ComplianceValidatorService for rules and configurations.
 
 Updated via rule management API.
-External Systems (Supporting Infrastructure)
+
+External Systems (Supporting Infrastructure)
 Description: Systems for caching, async processing, and monitoring.
 
 Representation: Separate boxes for:
@@ -15,7 +83,8 @@ Redis: Caches rules, mappings, and error codes (TTL: 5 minutes).
 Message Queue: Kafka/RabbitMQ for async flow processing.
 
 Monitoring: Prometheus (metrics), ELK (logs).
-Technologies: Redis, Kafka/RabbitMQ, Prometheus, ELK.
+
+Technologies: Redis, Kafka/RabbitMQ, Prometheus, ELK.
 
 Interaction:
 Redis: Read/write by Caching Interceptor.
@@ -23,7 +92,8 @@ Redis: Read/write by Caching Interceptor.
 Message Queue: Receives async tasks, stores results in MongoDB.
 
 Monitoring: Receives metrics and logs from interceptors.
-Interactions (Arrows)
+
+Interactions (Arrows)
 External Clients → API Gateway: HTTP POST /validate with clientId, flowType, requestData.
 
 API Gateway → ComplianceValidatorService: Forwards request after CORS/security checks.
@@ -39,7 +109,8 @@ Message Queue → MongoDB: Stores async results.
 ComplianceValidatorService → Monitoring: Sends logs to ELK, metrics to Prometheus.
 
 ComplianceValidatorService → External Clients (via API Gateway): Returns validation response (e.g., errorCode: 4001).
-Annotations
+
+Annotations
 Performance: Label key paths with targets (e.g., "<500ms total latency", "<100ms cache hit").
 
 Scalability: Note autoscaling (e.g., "Kubernetes autoscaling" on ComplianceValidatorService).
@@ -47,7 +118,8 @@ Scalability: Note autoscaling (e.g., "Kubernetes autoscaling" on ComplianceValid
 Dynamic Updates: Indicate rule updates via POST /rules/update to MongoDB.
 
 High Availability: Highlight circuit breakers for MongoDB/Drools failures.
-Technologies Summary
+
+Technologies Summary
 Application: Spring Boot, Drools, Java.
 
 Database: MongoDB (indexed).
@@ -59,7 +131,8 @@ Async: Kafka/RabbitMQ.
 Monitoring: Prometheus, ELK.
 
 Gateway: Spring Cloud Gateway/AWS API Gateway.
-Visual Layout
+
+Visual Layout
 Top: External Clients (boxes for systems/UI).
 
 Middle: API Gateway (single box).
@@ -71,4 +144,4 @@ Bottom Left: MongoDB (box with collection sub-boxes).
 Bottom Right: External Systems (boxes for Redis, Message Queue, Monitoring).
 
 Arrows: Show request flow, data queries, cache access, async tasks, and monitoring.
-
+
