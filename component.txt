@@ -1,0 +1,213 @@
+@startuml
+
+package "ComplianceValidatorService" {
+  [API Controller] #--> [Interceptor Layer]
+  [Interceptor Layer] #--> [Rule Processor]
+  [Rule Processor] #--> [Drools Engine]
+  [Rule Processor] #--> [Async Processor]
+  
+  [API Controller] --> [:REST API]
+  [Interceptor Layer] --> [:Cache API]
+  [Rule Processor] --> [:MongoDB Query]
+  [Async Processor] --> [:Queue Publish]
+  [Interceptor Layer] --> [:Monitoring API]
+}
+
+[External Client Systems] --> [API Gateway]
+[API Gateway] --> [:REST API]
+
+[MongoDB] #--> [:MongoDB Query]
+[Redis] #--> [:Cache API]
+[Message Queue] #--> [:Queue Publish]
+[Monitoring System] #--> [:Monitoring API]
+
+[MongoDB] <<..>> [Message Queue]
+
+note right of [ComplianceValidatorService]
+  Tech: Spring Boot, Drools
+  Performance: <500ms latency
+end note
+
+@enduml
+
+-------------------------------------------------------
+Component Diagram Description
+Diagram Title
+ComplianceValidatorService Component Diagram
+Purpose
+Break down the ComplianceValidatorService into its core components, showing their dependencies and interactions to clarify the system’s internal structure and integration with external systems.
+Components
+Shapes: 
+Rectangle with stereotype <<component>>: Represents a component.
+
+Port: Small squares on component edges for interfaces.
+
+Interface: Circle (provided) or semicircle (required) for services.
+
+Arrow: Solid for dependencies, dashed for data flow or interactions.
+
+Annotations: Include technologies (e.g., Spring Boot, MongoDB) and key interactions (e.g., HTTP, cache).
+
+---------------------------------------------------------------------------------------
+
+Components and Structure
+ComplianceValidatorService (Main Component)
+Stereotype: <<component>>
+
+Description: The core microservice handling compliance validation and rule management.
+
+Sub-Components (nested within):
+API Controller (<<component>>): Handles REST endpoints (/validate, /validate/async, /rules/update).
+
+Interceptor Layer (<<component>>): Manages cross-cutting concerns (authentication, validation, logging, metrics, error handling, caching).
+
+Rule Processor (<<component>>): Orchestrates flow-based rule selection and client configuration checks.
+
+Drools Engine (<<component>>): Executes rules using precompiled KieSession.
+
+Async Processor (<<component>>): Handles asynchronous validation via message queue.
+
+Interfaces:
+Provided: REST API (/validate, /rules/update) via HTTP.
+
+Required: MongoDB, Redis, Message Queue, Monitoring APIs.
+
+Technologies: Spring Boot, Java, Drools.
+
+MongoDB Database (<<component>>)
+Description: Stores rules, mappings, and configurations.
+
+Sub-Components (collections):
+rules: Rule content, versioning, ruleGroup, errorCodeId.
+
+rules_staging: Staging for rule testing.
+
+flow_rule_mappings: Maps flowType to ruleIds, priority.
+
+client_rule_mappings: Client-specific rule enablement, priority.
+
+client_settings: Global rule toggle (allRulesEnabled).
+
+rule_error_codes: Error codes and messages.
+
+Interface:
+Provided: MongoDB query API (e.g., read/write collections).
+
+Technologies: MongoDB with indexes.
+
+Redis Cache (<<component>>)
+Description: Caches rules, mappings, and error codes for performance.
+
+Interface:
+Provided: Key-value store API (get/set with TTL).
+
+Technologies: Redis.
+
+Message Queue (<<component>>)
+Description: Handles asynchronous validation tasks for non-critical flows.
+
+Interface:
+Provided: Publish/subscribe API.
+
+Technologies: Kafka or RabbitMQ.
+
+Monitoring System (<<component>>)
+Description: Collects logs and metrics for observability.
+
+Sub-Components:
+ELK Stack: Stores and analyzes logs.
+
+Prometheus: Collects and visualizes metrics.
+
+Interface:
+Provided: Log ingestion and metrics scraping APIs.
+
+Technologies: ELK, Prometheus.
+
+API Gateway (<<component>>)
+Description: Routes external requests, handles CORS, and basic security.
+
+Interface:
+Provided: HTTP endpoint for clients.
+
+Required: ComplianceValidatorService REST API.
+
+Technologies: Spring Cloud Gateway or AWS API Gateway.
+
+External Client Systems (<<component>>)
+Description: Systems sending validation requests (e.g., payment gateway, user registration).
+
+Interface:
+Required: ComplianceValidatorService REST API (via API Gateway).
+
+Technologies: Various (HTTP clients).
+
+----------------------------------------------------------------------------------
+
+Dependencies and Interactions
+External Client Systems → API Gateway:
+Dependency: Sends HTTP POST /validate with clientId, flowType, requestData.
+
+Arrow: Solid (client requires API Gateway’s endpoint).
+
+API Gateway → ComplianceValidatorService:
+Dependency: Forwards requests to API Controller.
+
+Arrow: Solid (requires REST API).
+
+ComplianceValidatorService → MongoDB:
+Dependency: API Controller, Rule Processor query collections (rules, flow_rule_mappings, etc.).
+
+Arrow: Dashed (data flow for read/write).
+
+Example: Fetch flow_rule_mappings for flowType.
+
+ComplianceValidatorService → Redis:
+Dependency: Interceptor Layer checks cache for rules/mappings.
+
+Arrow: Dashed (data flow for get/set).
+
+Example: Cache rules by ruleId.
+
+ComplianceValidatorService → Message Queue:
+Dependency: Async Processor sends tasks for non-critical flows.
+
+Arrow: Dashed (publish messages).
+
+Example: Send async validation task.
+
+ComplianceValidatorService → Monitoring System:
+Dependency: Interceptor Layer sends logs to ELK, metrics to Prometheus.
+
+Arrow: Dashed (data flow).
+
+Example: Log request details, record latency.
+
+Internal Dependencies within ComplianceValidatorService:
+API Controller → Interceptor Layer: Requests pass through interceptors (e.g., authentication).
+
+Interceptor Layer → Rule Processor: Validated requests proceed to rule selection.
+
+Rule Processor → Drools Engine: Sends filtered rules for execution.
+
+Rule Processor → Async Processor: Routes non-critical requests.
+
+Arrows: Solid (internal dependencies).
+
+Message Queue → MongoDB:
+Dependency: Stores async validation results.
+
+Arrow: Dashed (data write).
+
+--------------------------------------------------------
+Annotations
+Technologies: Label components with tools (e.g., "Spring Boot", "MongoDB").
+
+Performance: Note targets (e.g., "<100ms cache hit", "<500ms total latency").
+
+Scalability: Indicate autoscaling (e.g., "Kubernetes" on ComplianceValidatorService).
+
+Dynamic Updates: Note rule updates via /rules/update to MongoDB.
+
+Reliability: Highlight circuit breakers for MongoDB/Drools.
+

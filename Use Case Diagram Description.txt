@@ -1,0 +1,130 @@
+Use Case Diagram Description
+Diagram Title
+ComplianceValidatorService Use Case Diagram
+Purpose
+Illustrate how different actors (users or systems) interact with the ComplianceValidatorService to validate compliance, manage rules, and monitor the system, ensuring alignment with real-world scenarios like payment processing, user registration, and compliance administration.
+
+Components
+Actors: Represent users or external systems interacting with the service.
+
+Use Cases: Represent key functionalities provided by the service.
+
+System Boundary: Encloses the service’s use cases.
+
+Relationships: Lines connecting actors to use cases (association, include, extend).
+
+Actors
+Client System  
+Description: External systems (e.g., payment processing app, user registration system) that send validation requests.  
+
+Real-World Scenario: A payment gateway validating transaction compliance.
+
+Compliance Admin  
+Description: Human users (e.g., compliance officers, developers) who manage rules and configurations.  
+
+Real-World Scenario: A compliance team updating rules for new regulations.
+
+Monitoring System  
+Description: External systems (e.g., Prometheus, ELK) that collect logs and metrics.  
+
+Real-World Scenario: DevOps team monitoring service performance.
+
+Use Cases (Within System Boundary: ComplianceValidatorService)
+Validate Compliance  
+Description: Process a validation request for a specific flow and client, returning success or error codes.  
+
+Scenario: Validate a payment transaction against compliance rules.
+
+Manage Rules  
+Description: Add, update, or delete rules in the rules or rules_staging collections.  
+
+Scenario: Update a rule to reflect new regulatory requirements.
+
+Manage Client Configurations  
+Description: Enable/disable rules for a client or toggle all rules via client_rule_mappings and client_settings.  
+
+Scenario: Disable a specific rule for a client due to temporary exemptions.
+
+Manage Flow Mappings  
+Description: Update flow_rule_mappings to associate rules with flow types.  
+
+Scenario: Add a new rule to the PAYMENT_PROCESSING flow.
+
+View Logs and Metrics  
+Description: Access logs (ELK) and metrics (Prometheus) for auditing and performance monitoring.  
+
+Scenario: Analyze rule failure rates for a client.
+
+Relationships
+Associations:
+Client System → Validate Compliance: Sends HTTP POST /validate with clientId, flowType, requestData.
+
+Compliance Admin → Manage Rules: Uses API or UI to update rules.
+
+Compliance Admin → Manage Client Configurations: Configures client-specific rule settings.
+
+Compliance Admin → Manage Flow Mappings: Updates flow-to-rule mappings.
+
+Monitoring System → View Logs and Metrics: Collects logs and metrics via interceptors.
+
+Include:
+Validate Compliance includes View Logs and Metrics: Every validation logs request details and metrics.
+
+Extend:
+Validate Compliance extends to Manage Rules (optional): If a rule is missing or invalid, admins may need to update it.
+
+Validate Compliance extends to Manage Client Configurations (optional): If client rules are misconfigured, admins may adjust settings.
+
+Diagram Layout
+System Boundary: A large rectangle labeled "ComplianceValidatorService" containing all use cases.
+
+Actors: Place outside the boundary:
+Client System: Left side (represents external apps).
+
+Compliance Admin: Right side (represents human users).
+
+Monitoring System: Bottom (represents infrastructure).
+
+Use Cases: Inside the boundary, as ovals:
+Validate Compliance: Central, as the primary use case.
+
+Manage Rules, Manage Client Configurations, Manage Flow Mappings: Grouped together, indicating admin tasks.
+
+View Logs and Metrics: Near the bottom, tied to monitoring.
+
+Lines:
+Solid lines for associations (e.g., Client System to Validate Compliance).
+
+Dashed lines for include/extend (e.g., Validate Compliance includes View Logs and Metrics).
+
+Annotations: Note technologies (e.g., "MongoDB", "Drools") and scenarios (e.g., "Payment validation").
+
+Real-World Scenarios Alignment
+Payment Processing:
+Actor: Client System (payment gateway).
+
+Use Case: Validate Compliance (sends flowType: PAYMENT_PROCESSING, gets error code if rules fail).
+
+Outcome: Ensures transactions meet compliance standards.
+
+Regulatory Update:
+Actor: Compliance Admin.
+
+Use Case: Manage Rules (adds a new rule to rules_staging, tests, then moves to rules).
+
+Outcome: Keeps system compliant with new laws.
+
+Client Exemption:
+Actor: Compliance Admin.
+
+Use Case: Manage Client Configurations (disables a rule in client_rule_mappings for a client).
+
+Outcome: Customizes compliance for specific clients.
+
+Performance Monitoring:
+Actor: Monitoring System.
+
+Use Case: View Logs and Metrics (tracks latency, rule failures).
+
+Outcome: Ensures service reliability and performance.
+

@@ -1,0 +1,230 @@
+Flowchart Steps
+Start  
+Shape: Oval  
+
+Label: "Start"  
+
+Description: The process begins when a request is received.
+
+Receive API Request  
+Shape: Parallelogram  
+
+Label: "Receive POST /validate Request (clientId, flowType, requestData)"  
+
+Description: The API Gateway forwards an HTTP POST request with clientId, flowType (enum, e.g., PAYMENT_PROCESSING), and requestData.  
+
+Technology: Spring Boot, API Gateway.
+
+Authentication Interceptor  
+Shape: Diamond  
+
+Label: "Valid clientId and Token?"  
+
+Description: The Authentication Interceptor checks if clientId exists in client_settings and validates the API token (if used).  
+
+Outcomes:  
+Yes: Proceed to next step.  
+
+No: Go to "Return Error Response" (401 Unauthorized).
+
+Request Validation Interceptor  
+Shape: Diamond  
+
+Label: "Valid flowType and requestData?"  
+
+Description: The Request Validation Interceptor ensures flowType is a recognized enum and requestData has required fields.  
+
+Outcomes:  
+Yes: Proceed.  
+
+No: Go to "Return Error Response" (400 Bad Request).
+
+Logging Interceptor  
+Shape: Rectangle  
+
+Label: "Log Request Details"  
+
+Description: Log clientId, flowType, and timestamp asynchronously to ELK.  
+
+Technology: ELK Stack.
+
+Check Client Settings  
+Shape: Diamond  
+
+Label: "allRulesEnabled for clientId?"  
+
+Description: Query client_settings collection to check if allRulesEnabled is true for the clientId.  
+
+Technology: MongoDB.  
+
+Outcomes:  
+Yes: Proceed.  
+
+No: Go to "Return Success Response" (no rules applied).
+
+Fetch Flow Rules  
+Shape: Rectangle  
+
+Label: "Query flow_rule_mappings for flowType"  
+
+Description: Check Redis cache; if miss, query flow_rule_mappings for ruleIds tied to flowType. Use priority to order rules.  
+
+Technology: Redis, MongoDB.  
+
+Outcome: Retrieve list of ruleIds.
+
+Filter Rules by Client  
+Shape: Rectangle  
+
+Label: "Filter rules using client_rule_mappings"  
+
+Description: Query client_rule_mappings to keep only rules where enabled: true for clientId. Respect priority.  
+
+Technology: MongoDB.  
+
+Outcome: Refined list of applicable ruleIds.
+
+Fetch Rule Details  
+Shape: Rectangle  
+
+Label: "Fetch rules from rules collection"  
+
+Description: Check Redis cache; if miss, query rules collection for ruleContent, errorCodeId, and active: true.  
+
+Technology: Redis, MongoDB.  
+
+Outcome: List of Drools rules.
+
+Execute Rules in Drools  
+Shape: Rectangle  
+
+Label: "Execute rules in Drools"  
+
+Description: Load precompiled KieSession from cache or compile rules, then execute against requestData.  
+
+Technology: Drools.  
+
+Outcome: List of passed/failed rules.
+
+Check Rule Results  
+Shape: Diamond  
+
+Label: "Any rules failed?"  
+
+Description: Evaluate Drools results for failures.  
+
+Outcomes:  
+No: Go to "Return Success Response".  
+
+Yes: Proceed to fetch error details.
+
+Fetch Error Codes  
+Shape: Rectangle  
+
+Label: "Query rule_error_codes for errorCode, errorMessage"  
+
+Description: For failed rules, fetch errorCode and errorMessage from rule_error_codes using errorCodeId.  
+
+Technology: MongoDB.  
+
+Outcome: List of error details.
+
+Error Handling Interceptor  
+Shape: Rectangle  
+
+Label: "Format error response"  
+
+Description: Standardize error response with errorCode and errorMessage.  
+
+Technology: Spring Boot.
+
+Metrics Interceptor  
+Shape: Rectangle  
+
+Label: "Record metrics"  
+
+Description: Log latency and rule count to Prometheus (sampled for high traffic).  
+
+Technology: Prometheus.
+
+Return Success Response  
+Shape: Parallelogram  
+
+Label: "Return Success Response"  
+
+Description: Return HTTP 200 with { "status": "success" }.  
+
+Technology: Spring Boot.
+
+Return Error Response  
+Shape: Parallelogram  
+
+Label: "Return Error Response"  
+
+Description: Return HTTP 400/401/500 with { "status": "failed", "errors": [{ "errorCode": 4001, "errorMessage": "..." }] }.  
+
+Technology: Spring Boot.
+
+End  
+Shape: Oval  
+
+Label: "End"  
+
+Description: Process completes, response sent to client.
+
+====================================================================
+
+Flow Connections
+Start → Receive API Request
+
+Receive API Request → Authentication Interceptor
+
+Authentication Interceptor:
+Yes → Request Validation Interceptor
+
+No → Return Error Response → End
+
+Request Validation Interceptor:
+Yes → Logging Interceptor
+
+No → Return Error Response → End
+
+Logging Interceptor → Check Client Settings
+
+Check Client Settings:
+Yes → Fetch Flow Rules
+
+No → Return Success Response → End
+
+Fetch Flow Rules → Filter Rules by Client
+
+Filter Rules by Client → Fetch Rule Details
+
+Fetch Rule Details → Execute Rules in Drools
+
+Execute Rules in Drools → Check Rule Results
+
+Check Rule Results:
+No → Metrics Interceptor
+
+Yes → Fetch Error Codes
+
+Fetch Error Codes → Error Handling Interceptor
+
+Error Handling Interceptor → Metrics Interceptor
+
+Metrics Interceptor → Return Success Response or Return Error Response
+
+Return Success Response → End
+
+Return Error Response → End
+
+Annotations
+Performance: Add notes like "<100ms cache hit", "<300ms Drools execution", "<500ms total".
+
+Technologies: Label steps with tools (e.g., "MongoDB", "Drools", "Redis").
+
+Async: Note that logging and metrics are async to avoid delays.
+
+Caching: Indicate Redis checks at rule/mapping fetch steps.
+
