@@ -1,0 +1,123 @@
+🔄 Main Event Processing Flow
+1. Event Consumption
+
+Kafka publishes an Avro event.
+
+The Kafka Consumer (Spring Kafka) receives the event from the subscribed topic.
+
+2. Deserialization
+
+The consumer deserializes Avro into JSON (or a POJO).
+
+This is the standard form for internal processing.
+
+3. Mapping Lookup
+
+The Transformation Engine queries Postgres (mappings table) using:
+
+vendor_code
+
+event_type
+
+version
+
+The database returns the mapping_json document (JOLT spec or JSON/YAML mapping rules).
+
+4. Transformation
+
+The Transformation Engine applies the mapping rules:
+
+Input = JSON event payload
+
+Rules = mapping_json from DB
+
+Output = vendor-specific JSON format
+
+5. Vendor API Call
+
+The transformed payload is sent to the Vendor API through the API Gateway.
+
+6. Success Path
+
+If the API responds with 200 OK:
+
+The consumer writes an audit record with status=SUCCESS, retry_count=0.
+
+The consumer commits the Kafka offset, confirming successful processing.
+
+7. Failure Path
+
+If the API responds with non-200:
+
+A retry loop begins, with exponential backoff or fixed delay, up to maxRetries (default 3).
+
+On retry success:
+
+Audit record is updated with status=SUCCESS and the final retry count.
+
+Kafka offset is committed.
+
+On retry failure:
+
+Audit record is updated with status=RETRY_FAILED and current retry count.
+
+8. Exhausted Retries
+
+If all retries fail:
+
+The original payload (Avro/JSON + headers) is published to Kafka DLQ.
+
+An audit record is inserted with status=TO_RESUBMIT, retry_count=maxRetries.
+
+Offset commit policy:
+
+To prevent event loss, typically the offset is committed only after successful DLQ handoff.
+
+🔁 Resubmission Processing Flow
+1. Scheduler Consumption
+
+A Resubmission Scheduler (Spring Batch, Quartz, or another Kafka consumer) reads events from the DLQ.
+
+2. Deserialization
+
+The failed event payload (Avro or JSON) is deserialized to JSON.
+
+3. Mapping Lookup
+
+As in main flow, the scheduler requests mapping_json from the mappings table in Postgres.
+
+4. Transformation
+
+Transformation Engine applies mapping rules again to produce vendor-specific JSON.
+
+5. Vendor API Call
+
+The scheduler sends the transformed payload to the Vendor API via the API Gateway.
+
+6. Success Path
+
+If resubmission succeeds (200 OK):
+
+Update audit record with status=RESUBMITTED_SUCCESS.
+
+Optionally remove the event from DLQ.
+
+7. Failure Path
+
+If resubmission fails again:
+
+Update audit record with status=DEAD.
+
+Optionally move the event to a permanent dead-letter store (e.g., archive topic, S3, or DB).
+
+Trigger alerting/monitoring (Splunk, PagerDuty, etc.).
+
+✅ Key Notes
+
+Mappings Table: Decouples transformation logic from code; new vendors require only DB inserts, not code changes.
+
+Audits Table: Single source of truth for processing, retry, and resubmission states.
+
+DLQ Strategy: Keeps main consumer non-blocking while ensuring failed events are not lost.
+
+Resubmission Scheduler: Ensures that failed events are reprocessed asynchronously without blocking main pipeline.
