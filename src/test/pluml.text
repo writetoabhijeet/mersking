@@ -1,0 +1,64 @@
+@startuml
+actor Kafka as K
+participant "Kafka Consumer" as C
+database "Postgres (mappings)" as M
+participant "Transformation Engine" as T
+participant "Vendor API (via API Gateway)" as API
+participant "Kafka DLQ" as DLQ
+participant "Resubmission Scheduler" as S
+database "Postgres (audits)" as DB
+
+== Main Event Processing ==
+K -> C: Consume Avro Event
+C -> T: Deserialize Avro → JSON
+T -> M: Fetch mapping (vendor_code, event_type, version)
+M --> T: mapping_json
+T -> T: Apply transformation (JSON + mapping_json → vendor JSON)
+T --> C: Transformed payload
+C -> API: Invoke Vendor API
+
+alt API Success
+    API --> C: 200 OK
+    C -> DB: Insert audit(status=SUCCESS, retry_count=0)
+    C -> K: Commit offset
+else API Failure
+    API --> C: Error response
+    loop Retry with Backoff (maxRetries=3, retry_count = N)
+        C -> API: Retry Vendor API (retry_count = N)
+        alt Retry success
+            API --> C: 200 OK
+            C -> DB: Insert/Update audit(status=SUCCESS, retry_count=N)
+            C -> K: Commit offset
+            break
+        else Retry failure
+            C -> DB: Insert/Update audit(status=RETRY_FAILED, retry_count=N)
+        end
+    end
+    
+    alt Retries exhausted
+        C -> DLQ: Publish original payload (Avro/JSON) with headers
+        C -> DB: Insert audit(status=TO_RESUBMIT, retry_count=maxRetries)
+        ' Offset commit policy: commit depending on DLQ strategy; to prevent event loss, typically commit after successful resubmission
+    end
+end
+
+== Resubmission Processing ==
+S -> DLQ: Consume failed event
+S -> T: Deserialize Avro/JSON payload to JSON
+T -> M: Fetch mapping (vendor_code, event_type, version)
+M --> T: mapping_json
+T -> T: Apply transformation (JSON + mapping_json → vendor JSON)
+T --> S: Transformed payload
+
+S -> API: Retry Vendor API
+
+alt Resubmit Success
+    API --> S: 200 OK
+    S -> DB: Update audit(status=RESUBMITTED_SUCCESS)
+    S -> DLQ: Remove successful event from DLQ (optional)
+else Resubmit Failure
+    API --> S: Error response
+    S -> DB: Update audit(status=DEAD)
+    ' Optional: move event to permanent dead-letter store or alert
+end
+@enduml
