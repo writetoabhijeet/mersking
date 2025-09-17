@@ -1,0 +1,97 @@
+@startuml
+entity "mappings" as mappings {
+    * mapping_id : SERIAL [PK]
+    --
+    vendor_code : VARCHAR(50)
+    event_type : VARCHAR(100)
+    version : INT
+    mapping_json : JSONB
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+    --
+    UNIQUE(vendor_code, event_type, version)
+}
+
+entity "audits" as audits {
+    * audit_id : SERIAL [PK]
+    --
+    event_key : VARCHAR(200)
+    vendor_code : VARCHAR(50)
+    event_type : VARCHAR(100)
+    retry_count : INT
+    status : VARCHAR(30)  -- SUCCESS, FAILED_TO_API, TO_RESUBMIT, RESUBMITTED_SUCCESS, DEAD
+    http_status_code : INT
+    error_message : TEXT
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+mappings ||..o{ audits : "used for transformation/audit"
+@enduml
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------
+
+1. mappings Table
+
+Purpose: Holds vendor-specific transformation rules that convert Avro → JSON → Vendor API JSON.
+
+Why? You want a config-driven design: new vendor or new version means insert/update a row here, not code changes.
+
+Key fields:
+
+mapping_id: Primary key.
+
+vendor_code: Unique identifier for vendor (e.g., "VENDOR_A").
+
+event_type: Type of event (e.g., "ORDER_CREATED").
+
+version: Supports versioning in case vendor API evolves.
+
+mapping_json: The actual transformation logic (JOLT spec or JSON mapping).
+
+created_at/updated_at: Audit fields.
+
+Unique constraint: (vendor_code, event_type, version) ensures only one mapping per vendor/event/version combination.
+
+
+2. audits Table
+
+Purpose: Tracks processing status of each event — success, failure, retries, resubmissions.
+
+Why? Gives observability + supports monitoring & reporting in Splunk.
+
+Key fields:
+
+audit_id: Primary key.
+
+event_key: A unique identifier for the event (from Kafka message key or payload).
+
+vendor_code: Who the event was targeted for.
+
+event_type: What kind of event.
+
+retry_count: How many retries attempted before success/failure.
+
+status: Processing state (values: SUCCESS, FAILED_TO_API, TO_RESUBMIT, RESUBMITTED_SUCCESS, DEAD).
+
+http_status_code: The last HTTP response code received.
+
+error_message: Error details (if failure).
+
+created_at/updated_at: Audit fields.
+
+--------------------------
+
+3. Relationship (mappings → audits)
+
+Each audit record corresponds to an event processed using one vendor’s mapping.
+
+A mapping may be used by many audit records (since multiple events of same vendor/event_type/version are processed over time).
+
+Cardinality:
+
+One mapping → can be referenced by many audits.
+
+One audit → corresponds to exactly one mapping (the one used during transformation).
+
