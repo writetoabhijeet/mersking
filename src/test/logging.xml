@@ -1,0 +1,163 @@
+@startuml
+title Centralized & Declarative Logging Architecture
+
+package "Spring Boot Application" {
+  
+  [Kafka Consumer] --> [Transformation Engine]
+  [Transformation Engine] --> [Vendor API Client Decorator]
+  [Vendor API Client Decorator] --> [Vendor API (via API Gateway)]
+
+  ' AOP interceptors cross-cut services
+  component "AOP Logging Interceptor" as AOP
+  AOP ..> [Kafka Consumer] : logs entry/exit, timing
+  AOP ..> [Transformation Engine] : logs transformation metadata
+  AOP ..> [Vendor API Client Decorator] : logs retry attempts
+
+  ' Decorator wraps external API calls
+  component "Vendor API Client Decorator" as Decorator
+  Decorator --> [Vendor API (via API Gateway)]
+
+  ' MDC enriches all logs
+  component "MDC Context" as MDC
+  MDC ..> AOP : traceId, vendor, eventType
+  MDC ..> Decorator : retryCount, status
+  MDC ..> [Kafka Consumer] : topic, partition, offset
+
+  ' Logging infrastructure
+  component "SLF4J API" as SLF4J
+  component "Logback Impl" as Logback
+  component "Async Appender" as AsyncAppender
+  component "JSON Encoder (Logstash)" as Encoder
+  component "Splunk / File Sink" as Splunk
+
+  [Kafka Consumer] --> SLF4J
+  [Transformation Engine] --> SLF4J
+  [Vendor API Client Decorator] --> SLF4J
+  AOP --> SLF4J
+
+  SLF4J --> Logback
+  Logback --> AsyncAppender
+  AsyncAppender --> Encoder
+  Encoder --> Splunk
+}
+
+' External system
+[Vendor API (via API Gateway)] as API
+
+@enduml
+------------------------------------------------------------------------------------------------------------------
+
+How to Read This Diagram
+
+AOP Interceptor: Cross-cuts service layers (consumer, transformer, vendor client). Handles entry/exit logs, timings, exceptions.
+
+Vendor API Decorator: Wraps outbound API calls → logs retries, HTTP statuses, and enriches logs with vendor context.
+
+MDC Context: Populates log entries with traceId, spanId, vendor, eventType, etc. Automatically included in every log line.
+
+SLF4J + Logback: Standard logging stack.
+
+Async Appender: Buffers and writes logs asynchronously (debug/audit).
+
+JSON Encoder: Formats logs into structured JSON for Splunk ingestion.
+
+Splunk Sink: Final log destination (files shipped to Splunk, or direct stream).
+
+--------------------------------------------------------------------------------------------------
+
+This visual shows where each logging concern lives in the architecture:
+
+Cross-cutting (AOP),
+
+API wrapper (Decorator),
+
+Context propagation (MDC),
+
+Infrastructure (Async + JSON + Splunk).
+
+---------------------------------------------------------------------------------------------------------
+@startuml
+title Simplified Centralized Logging in Main + Resubmission Flow
+
+package "Event Processing" {
+  [Kafka Consumer] --> [Transformation Engine]
+  [Transformation Engine] --> [Vendor API Client]
+}
+
+package "Resubmission Flow" {
+  [Resubmission Scheduler] --> [Transformation Engine]
+  [Transformation Engine] --> [Vendor API Client]
+}
+
+' Cross-cutting Logging
+rectangle "AOP Logging Interceptors" as AOP
+rectangle "MDC Context (traceId, vendor, eventType, retryCount)" as MDC
+rectangle "Vendor API Decorator (logs retries, errors)" as Decorator
+
+AOP ..> [Kafka Consumer]
+AOP ..> [Resubmission Scheduler]
+AOP ..> [Transformation Engine]
+
+Decorator ..> [Vendor API Client]
+MDC ..> AOP
+MDC ..> Decorator
+
+' Logging Infrastructure
+[Application Code] --> [SLF4J API]
+[SLF4J API] --> [Logback]
+[Logback] --> [Async Appender (DEBUG/AUDIT)]
+[Logback] --> [Sync Appender (ERROR/CRITICAL)]
+[Async Appender (DEBUG/AUDIT)] --> [JSON Encoder]
+[Sync Appender (ERROR/CRITICAL)] --> [JSON Encoder]
+[JSON Encoder] --> [Log Files / Splunk]
+
+@enduml
+------------------------------------------------------------------------
+
+1. Main & Resubmission Flows
+
+Main Flow:
+
+Kafka Consumer → Transformation Engine → Vendor API Client.
+
+Resubmission Flow:
+
+Resubmission Scheduler → Transformation Engine → Vendor API Client.
+
+Both flows pass through the same logging infrastructure.
+
+2. Cross-Cutting Logging
+
+AOP Logging Interceptors:
+
+Automatically log method entry/exit, execution time, and exceptions.
+
+Works for both main consumer and resubmission scheduler.
+
+MDC Context:
+
+Injects extra info into every log line (traceId, vendor, eventType, retryCount).
+
+Helps correlate logs across distributed systems (Kafka + Vendor API).
+
+Vendor API Decorator:
+
+Wraps API client calls.
+
+Logs retries, HTTP status codes, errors.
+
+Keeps business logic clean.
+
+3. Logging Infrastructure
+
+SLF4J API: Facade for logging. Application only calls logger.info(...) etc.
+
+Logback: The actual logging engine.
+
+Async Appender: Handles DEBUG/AUDIT logs asynchronously so performance isn’t impacted.
+
+Sync Appender: Handles ERROR/CRITICAL logs synchronously, ensuring no important errors are lost.
+
+JSON Encoder: Formats logs into structured JSON with MDC fields.
+
+Log Files / Splunk: Logs are written locally and shipped to Splunk for searching, dashboards, and alerting.
